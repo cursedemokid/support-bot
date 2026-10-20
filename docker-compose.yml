@@ -1,0 +1,48 @@
+# Бот поддержки. База — внешняя: у заказчика это свой PostgreSQL, и второй
+# экземпляр в этом же compose только запутал бы, кто чем владеет.
+#
+# Переменные — из .env рядом с файлом (DATABASE_URL, BOT_TOKEN и прочие).
+# Конфиг монтируется поверх образа: правка config/settings.yaml на сервере
+# применяется к следующему сообщению без пересборки.
+
+services:
+  bot:
+    build: .
+    image: support-bot:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Адрес базы, достижимый ИЗНУТРИ контейнера: localhost там — сам
+      # контейнер. Если база на том же хосте, что и Docker, это
+      # host.docker.internal (см. extra_hosts) или IP хоста — то есть адрес
+      # ДРУГОЙ, чем нужен локальному запуску `uv run python -m app`.
+      # Поэтому отдельная переменная: не задана — берётся DATABASE_URL как есть.
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-${DATABASE_URL}}
+    extra_hosts:
+      # Чтобы host.docker.internal работал и на Linux, а не только на Docker Desktop.
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./config:/app/config:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # Разовый запуск миграций: docker compose run --rm migrate
+  # Отдельной службой, а не в CMD бота: forward-only раннер берёт advisory-lock,
+  # но два стартующих одновременно контейнера всё равно устроили бы взаимную
+  # блокировку на старте вместо понятной ошибки.
+  migrate:
+    build: .
+    image: support-bot:latest
+    profiles: ["tools"]
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-${DATABASE_URL}}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./config:/app/config:ro
+      - ./migrations:/app/migrations:ro
+    command: ["python", "-m", "app.migrate"]

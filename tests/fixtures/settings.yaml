@@ -1,0 +1,21 @@
+# Эталон настроек для тестов поведения. Боевой config/settings.yaml правит
+# администратор на лету, поэтому тест, построенный на нём, краснел бы ровно
+# тогда, когда бота настраивают по назначению.
+#
+# Совпадает с боевым файлом по набору ключей (tests/test_config.py это
+# проверяет), но содержит тестовые bootstrap-ID сотрудников.
+
+timezone: Europe/Moscow
+
+support:
+  categories:
+    - {key: defect,  title: "Не работает / брак"}
+    - {key: usage,   title: "Как пользоваться"}
+    - {key: payment, title: "Оплата и возврат"}
+    - {key: other,   title: "Другое"}
+
+  manager_user_ids: [555, 777]
+  admin_user_ids: [999]
+
+  max_message_chars: 4000
+  start_payload_max_chars: 64

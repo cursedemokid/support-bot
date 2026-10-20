@@ -1,0 +1,73 @@
+[project]
+name = "support-bot"
+version = "0.1.0"
+description = "Telegram-бот поддержки: QR → категория → тикет → передача менеджеру"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "aiogram>=3.31,<4",
+    "sqlalchemy[asyncio]>=2.0.36,<3",
+    "asyncpg>=0.30,<1",
+    "pydantic>=2.9,<3",
+    "pydantic-settings>=2.6,<3",
+    "pyyaml>=6.0,<7",
+    "loguru>=0.7.3,<1",
+    "sentry-sdk[loguru]>=2.20,<3",
+    "openpyxl>=3.1,<4",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pre-commit>=4.0",
+    "types-pyyaml>=6.0",
+    "asyncpg-stubs>=0.30",
+    "types-openpyxl>=3.1,<4",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "DTZ", "T20", "SIM", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.isort]
+# app и tests — пакеты проекта, а не сторонние: без этого ruff ставит их
+# в один блок с sqlalchemy и aiogram.
+known-first-party = ["app", "tests"]
+
+[tool.ruff.lint.per-file-ignores]
+# Скрипты общаются с человеком через stdout — T201 здесь не нарушение.
+"scripts/*" = ["T201"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+# Петля событий на модуль, а не на тест: диспетчер aiogram собирается один раз
+# на модуль (роутеры привязываются к родителю навсегда), и его фикстура
+# модульная — петля не может быть короче.
+asyncio_default_fixture_loop_scope = "module"
+asyncio_default_test_loop_scope = "module"
+addopts = "-q --strict-markers"
